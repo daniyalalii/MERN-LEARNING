@@ -1,0 +1,2 @@
+This is the sample data for mini-exercise 1
+Second line.
