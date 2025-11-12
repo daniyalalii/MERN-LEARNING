@@ -20,6 +20,10 @@ const userSchema = new mongoose.Schema({
     type: Number,
     required: [true, "Age is required!"],
     min: [1, "Age must be positive!"]
+  },
+  timestamp: {
+    type: Date,
+    default: Date.now
   }
 });
  
