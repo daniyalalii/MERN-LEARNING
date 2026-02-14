@@ -24,7 +24,7 @@ app.get('/health', (req,res)=>{
 // error handling middleWare
 app.use((err,req,res,next)=>{
     console.error(err.stack);
-    res.status(500).json({error: error.message});
+    res.status(500).json({error: err.message});
 });
 
 module.exports = app;
