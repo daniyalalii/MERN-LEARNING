@@ -57,8 +57,8 @@ const validateSignup = (req,res,next) =>{
         errors.push('Password must be atleast 6 characters');
     }
 
-    // role validation
-    if(!role || !['user', 'admin'].includes(role)){
+    // role validation (optional)
+    if(role && !['user', 'admin'].includes(role)){
         errors.push('Role must be either user or admin');
     }
 
