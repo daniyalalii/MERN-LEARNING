@@ -2,7 +2,7 @@ const express = require('express');
 const productRoutes = require('./routes/productRoutes');
 const errorHandler = require('./middleware/errorHandler');
 const AppError = require('./utils/AppError');
-
+const authRoutes = require('./routes/authRoutes');
 const app = express();
 
 app.use(express.json());
@@ -22,6 +22,9 @@ app.use((req,res,next)=>{
     });
     next();
 });
+
+// auth Routes
+app.use('/auth', authRoutes);
 
 //-------------Routes----------------
 // health check routes
