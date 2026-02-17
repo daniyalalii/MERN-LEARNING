@@ -36,7 +36,62 @@ const validateProductData = (req,res,next) =>{
     next();
 };
 
+// signup data validation
+const validateSignup = (req,res,next) =>{
+    const {name,email,password,role} = req.body;
+    const errors = [];
+
+    // name validation
+    if(!name || typeof(name)!=='string' || name.trim().length<2){
+        errors.push('Name must be atleast 2 characters');
+    }
+
+    // email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if(!email || !emailRegex.test(email)){
+        errors.push('Valid email is required');
+    }
+
+    // password validation
+    if(!password || password.length<6){
+        errors.push('Password must be atleast 6 characters');
+    }
+
+    // role validation
+    if(!role || !['user', 'admin'].includes(role)){
+        errors.push('Role must be either user or admin');
+    }
+
+    if(errors.length>0){
+        return next(new AppError(`Validation failed: ${errors.join(', ')}`,400));
+    }
+    next();
+};
+
+// validating login data
+const validateLogin = (req,res,next) =>{
+    const {email, password} = req.body;
+    const errors = [];
+
+    // validating email
+    if(!email || !email.includes('@')){
+        errors.push('Valid email is required');
+    }
+
+    // validating password
+    if(!password){
+        errors.push('Password is required');
+    }
+
+    if(errors.length>0){
+        return next(new AppError(`Validation failed: ${errors.join(', ')}`,400));
+    }
+    next();
+};
+
 module.exports = {
     validateProductId,
-    validateProductData
+    validateProductData,
+    validateSignup,
+    validateLogin
 };
