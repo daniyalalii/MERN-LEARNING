@@ -2,7 +2,7 @@ const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/AppError');
 const ApiResponse = require('../utils/apiResponse');
 const {products,getNextId} = require('../data/productStore');
-
+const {logAudit, AUDIT_ACTIONS, AUDIT_RESOURCES} = require('../utils/auditLogger');
 
 // GET /products
 exports.getAllProducts = catchAsync(async(req,res,next)=>{
@@ -51,6 +51,20 @@ exports.createProduct = catchAsync(async(req,res,next)=>{
 
     products.push(newProduct);
 
+    logAudit({
+        req,
+        userId : req.user.id,
+        userName : req.user.email,
+        action : AUDIT_ACTIONS.CREATE_PRODUCT,
+        resource : AUDIT_RESOURCES.PRODUCT,
+        resourceId : newProduct.id,
+        status : "SUCCESS",
+        details : {
+            productName : newProduct.name,
+            price : newProduct.price
+        }
+    });
+
     ApiResponse.success(
         res,
         {product: newProduct},
@@ -71,6 +85,21 @@ exports.deleteProduct = catchAsync(async(req,res,next)=>{
 
     await new Promise(resolve=>setTimeout(resolve,10));
     const deletedProduct = products.splice(productIndex,1)[0];
+
+    logAudit({
+        req,
+        userId : req.user.id,
+        userName : req.user.email,
+        action : AUDIT_ACTIONS.DELETE_PRODUCT,
+        resource : AUDIT_RESOURCES.PRODUCT,
+        resourceId : id,
+        status : 'SUCCESS',
+        details : {
+            deletedBy : req.user.role,
+            productData : deletedProduct 
+        }
+    });
+
     ApiResponse.success(
         res,
         {product: deletedProduct},
