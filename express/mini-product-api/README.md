@@ -1,6 +1,6 @@
-# Secure Product API
+# 🔒 Secure Product API with Audit Logging
 
-A well-structured, secure REST API for managing products with JWT authentication and role-based authorization, built with Express.js following industry best practices.
+A production-ready, secure REST API for managing products with JWT authentication, role-based authorization, and comprehensive audit logging, built with Express.js following industry best practices.
 
 ## 🏗️ Project Structure
 
@@ -8,23 +8,27 @@ A well-structured, secure REST API for managing products with JWT authentication
 mini-product-api/
 ├── controllers/          # Request handlers (business logic)
 │   ├── authController.js      # Authentication logic
-│   └── productController.js   # Product operations
-├── data/                # In-memory data store
+│   ├── productController.js   # Product operations
+│   └── auditController.js     # Audit log viewing (NEW!)
+├── data/                # In-memory data stores
 │   ├── productStore.js  # Product storage
-│   └── userStore.js     # User storage
+│   ├── userStore.js     # User storage
+│   └── auditStore.js    # Audit log storage (NEW!)
 ├── middleware/          # Custom middleware
 │   ├── auth.js          # JWT verification & authorization
 │   ├── errorHandler.js  # Global error handler
 │   └── validation.js    # Input validation (products & auth)
 ├── routes/              # Route definitions (thin routes)
 │   ├── authRoutes.js    # Authentication routes
-│   └── productRoutes.js # Product routes (protected)
+│   ├── productRoutes.js # Product routes (protected)
+│   └── auditRoutes.js   # Audit log routes (NEW!)
 ├── utils/               # Helper utilities
 │   ├── AppError.js      # Custom error class
 │   ├── catchAsync.js    # Async error wrapper
 │   ├── apiResponse.js   # Standardized response helper
 │   ├── jwt.js           # JWT generation & verification
-│   └── password.js      # Password hashing utilities
+│   ├── password.js      # Password hashing utilities
+│   └── auditLogger.js   # Audit logging utility (NEW!)
 ├── app.js               # Express app setup
 ├── server.js            # Server startup
 └── package.json
@@ -36,6 +40,9 @@ mini-product-api/
 ✅ **Role-Based Authorization** - Admin and user roles with different permissions  
 ✅ **Password Security** - bcrypt hashing with salt for password storage  
 ✅ **Protected Routes** - All product routes require authentication  
+✅ **Audit Logging** - Comprehensive tracking of all user actions (NEW! 🆕)  
+✅ **Immutable Audit Trail** - Permanent record of WHO did WHAT, WHEN, and WHERE  
+✅ **Query Audit Logs** - Filter by user, action, or time  
 ✅ **Custom AppError class** - Standardized error handling  
 ✅ **catchAsync wrapper** - Eliminates try-catch blocks in async functions  
 ✅ **Global error handler** - Centralized error responses  
@@ -299,6 +306,224 @@ Authorization: Bearer <token>
 
 ---
 
+## 🔍 Audit Log Endpoints (NEW!)
+
+All endpoints below track user actions for compliance, security, and accountability.
+
+---
+
+### 9. **View My Audit Logs**
+
+Get audit logs for the currently logged-in user.
+
+**Endpoint:** `GET /audit-logs/me`
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "status": 200,
+  "message": "Your audit logs retrieved successfully",
+  "data": {
+    "auditLogs": [
+      {
+        "id": 1,
+        "timestamp": "2026-02-27T10:30:00.000Z",
+        "userId": 1,
+        "userName": "john@example.com",
+        "action": "SIGNUP",
+        "resource": "User",
+        "resourceId": 1,
+        "status": "SUCCESS",
+        "ipAddress": "::1",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)...",
+        "method": "POST",
+        "path": "/auth/signup",
+        "details": {
+          "role": "user",
+          "name": "John Doe"
+        }
+      },
+      {
+        "id": 2,
+        "timestamp": "2026-02-27T10:31:00.000Z",
+        "userId": 1,
+        "userName": "john@example.com",
+        "action": "LOGIN",
+        "resource": "Authentication",
+        "status": "SUCCESS",
+        "ipAddress": "::1",
+        "userAgent": "Mozilla/5.0...",
+        "method": "POST",
+        "path": "/auth/login",
+        "details": {}
+      },
+      {
+        "id": 3,
+        "timestamp": "2026-02-27T10:32:00.000Z",
+        "userId": 1,
+        "userName": "john@example.com",
+        "action": "CREATE_PRODUCT",
+        "resource": "Product",
+        "resourceId": 4,
+        "status": "SUCCESS",
+        "ipAddress": "::1",
+        "method": "POST",
+        "path": "/products",
+        "details": {
+          "productName": "Gaming Mouse",
+          "price": 49.99
+        }
+      }
+    ],
+    "count": 3
+  },
+  "timestamp": "2026-02-27T10:35:00.000Z"
+}
+```
+
+**What's Logged:**
+- ✅ All your signups and logins
+- ✅ Failed login attempts
+- ✅ Product operations (create, delete, view)
+- ✅ Authorization failures
+- ✅ IP address and user agent for security
+
+---
+
+### 10. **View All Audit Logs** ⚠️ **Admin Only**
+
+Get all audit logs from all users (admin only).
+
+**Endpoint:** `GET /audit-logs`
+
+**Headers:**
+```
+Authorization: Bearer <admin-token>
+```
+
+**Query Parameters (Optional):**
+- `userId` - Filter by user ID (e.g., `?userId=1`)
+- `action` - Filter by action type (e.g., `?action=DELETE_PRODUCT`)
+- `limit` - Limit results (e.g., `?limit=50`)
+
+**Examples:**
+- `GET /audit-logs` - All logs
+- `GET /audit-logs?userId=1` - All logs for user 1
+- `GET /audit-logs?action=DELETE_PRODUCT` - All product deletions
+- `GET /audit-logs?limit=100` - Last 100 logs
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "status": 200,
+  "message": "Audit logs retrieved successfully",
+  "data": {
+    "auditLogs": [
+      {
+        "id": 5,
+        "timestamp": "2026-02-27T10:40:00.000Z",
+        "userId": 2,
+        "userName": "admin@example.com",
+        "action": "DELETE_PRODUCT",
+        "resource": "Product",
+        "resourceId": 1,
+        "status": "SUCCESS",
+        "ipAddress": "::1",
+        "method": "DELETE",
+        "path": "/products/1",
+        "details": {
+          "deletedBy": "admin",
+          "productData": {
+            "id": 1,
+            "name": "Laptop",
+            "price": 999.99,
+            "category": "Electronics"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "timestamp": "2026-02-27T10:41:00.000Z",
+        "userId": 1,
+        "userName": "john@example.com",
+        "action": "FORBIDDEN_ACCESS",
+        "resource": "Product",
+        "status": "FAILURE",
+        "ipAddress": "::1",
+        "method": "DELETE",
+        "path": "/products/2",
+        "details": {
+          "requiredRoles": ["admin"],
+          "userRole": "user",
+          "attemptedPath": "/products/2"
+        }
+      }
+    ],
+    "count": 2
+  },
+  "timestamp": "2026-02-27T10:45:00.000Z"
+}
+```
+
+**Audit Actions Tracked:**
+- `SIGNUP` - User registration
+- `LOGIN` - Successful login
+- `LOGIN_FAILED` - Failed login attempt
+- `CREATE_PRODUCT` - Product creation
+- `DELETE_PRODUCT` - Product deletion (includes deleted data!)
+- `UNAUTHORIZED_ACCESS` - Invalid/missing token
+- `FORBIDDEN_ACCESS` - Insufficient permissions
+
+**Error Response (403 - Not Admin):**
+```json
+{
+  "success": false,
+  "status": 403,
+  "error": "fail",
+  "message": "You do not have permission to perform this operation",
+  "timestamp": "2026-02-27T10:45:00.000Z"
+}
+```
+
+---
+
+## 📊 Audit Logging Benefits
+
+### 🔒 **Security**
+- Track all user actions
+- Detect suspicious patterns
+- Investigate security breaches
+- Monitor failed login attempts
+
+### 📜 **Compliance**
+- Meet regulatory requirements (GDPR, HIPAA, SOX)
+- Provide audit trails during inspections
+- Prove accountability
+
+### 🔍 **Forensics**
+- Know WHO did WHAT and WHEN
+- Trace the history of changes
+- Recover deleted data
+- Understand attack vectors
+
+### 👥 **Accountability**
+- Users can't deny their actions
+- Admins can be held accountable
+- Prevent disputes
+
+---
+
+## 🔐 Protected Product Endpoints
+
+---
+
 ### 5. **Get All Products**
 
 Retrieve all products (requires authentication).
@@ -521,7 +746,39 @@ Authorization: Bearer <token>
 
 ## 🧪 Testing the API
 
-### Using PowerShell
+### 🚀 Quick Test (Automated)
+
+We've included an automated test script that tests all features including audit logging!
+
+**Step 1:** Start the server in one terminal:
+```powershell
+cd "d:\My Data\Web-Dev\MERN-LEARNING\express\mini-product-api"
+npm start
+```
+
+**Step 2:** Run the test script in another terminal:
+```powershell
+cd "d:\My Data\Web-Dev\MERN-LEARNING\express\mini-product-api"
+.\test-audit.ps1
+```
+
+The script will automatically test:
+- ✅ User signup and login
+- ✅ Failed authentication
+- ✅ Product creation and deletion
+- ✅ Authorization checks
+- ✅ Audit log viewing
+- ✅ Admin-only operations
+
+**See Also:**
+- `HOW_TO_TEST.md` - Testing guide
+- `QUICK_TEST.md` - Manual test commands
+- `TEST_AUDIT_LOGGING.md` - Detailed audit logging tests
+- `AUDIT_LOGGING_SUMMARY.md` - Complete audit logging documentation
+
+---
+
+### 📝 Manual Testing with PowerShell
 
 #### 1. **User Signup:**
 ```powershell
@@ -614,6 +871,32 @@ $adminHeaders = @{
 Invoke-WebRequest -Uri http://localhost:3000/products/1 -Method DELETE -Headers $adminHeaders | Select-Object -Expand Content
 ```
 
+#### 8. **View Your Audit Logs:** 🆕
+```powershell
+$headers = @{
+    "Authorization" = "Bearer $token"
+}
+Invoke-WebRequest -Uri http://localhost:3000/audit-logs/me -Headers $headers | Select-Object -Expand Content
+```
+
+#### 9. **Admin Views All Audit Logs:** 🆕
+```powershell
+$adminHeaders = @{
+    "Authorization" = "Bearer $adminToken"
+}
+# All logs
+Invoke-WebRequest -Uri http://localhost:3000/audit-logs -Headers $adminHeaders | Select-Object -Expand Content
+
+# Filter by user
+Invoke-WebRequest -Uri "http://localhost:3000/audit-logs?userId=1" -Headers $adminHeaders | Select-Object -Expand Content
+
+# Filter by action
+Invoke-WebRequest -Uri "http://localhost:3000/audit-logs?action=DELETE_PRODUCT" -Headers $adminHeaders | Select-Object -Expand Content
+
+# Recent logs
+Invoke-WebRequest -Uri "http://localhost:3000/audit-logs?limit=10" -Headers $adminHeaders | Select-Object -Expand Content
+```
+
 ---
 
 ### Using cURL (Linux/Mac/Git Bash)
@@ -677,6 +960,31 @@ ADMIN_TOKEN="your-admin-jwt-token-here"
 
 # Delete product
 curl -X DELETE http://localhost:3000/products/1 \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+#### 8. **View Your Audit Logs:** 🆕
+```bash
+curl http://localhost:3000/audit-logs/me \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+#### 9. **Admin Views All Audit Logs:** 🆕
+```bash
+# All logs
+curl http://localhost:3000/audit-logs \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+
+# Filter by user
+curl "http://localhost:3000/audit-logs?userId=1" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+
+# Filter by action
+curl "http://localhost:3000/audit-logs?action=DELETE_PRODUCT" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+
+# Recent logs
+curl "http://localhost:3000/audit-logs?limit=10" \
   -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 
@@ -820,7 +1128,50 @@ All error responses follow the same format:
 
 ---
 
-### 6. **Middleware Execution Order**
+### 6. **Audit Logging** 🆕
+
+Located in `utils/auditLogger.js`, tracks all user actions:
+
+```javascript
+logAudit({
+    req,                              // Express request object
+    userId: user.id,                  // Who performed the action
+    userName: user.email,             // User identifier
+    action: AUDIT_ACTIONS.LOGIN,      // What action was performed
+    resource: AUDIT_RESOURCES.AUTH,   // What resource was affected
+    resourceId: user.id,              // Specific resource ID
+    status: 'SUCCESS',                // SUCCESS or FAILURE
+    details: {                        // Additional context
+        role: user.role
+    }
+});
+```
+
+**What Gets Logged:**
+- ✅ **WHO** - User ID and email
+- ✅ **WHAT** - Action type (SIGNUP, LOGIN, DELETE, etc.)
+- ✅ **WHEN** - Timestamp (ISO format)
+- ✅ **WHERE** - IP address and user agent
+- ✅ **WHY** - Context in details object
+- ✅ **HOW** - HTTP method and path
+
+**Benefits:**
+- Accountability - Know who did what
+- Security - Detect suspicious patterns
+- Compliance - Meet regulatory requirements (GDPR, HIPAA, SOX)
+- Forensics - Investigate incidents
+- Recovery - Restore deleted data
+
+**Logged Actions:**
+- `SIGNUP` - User registration
+- `LOGIN` / `LOGIN_FAILED` - Authentication attempts
+- `CREATE_PRODUCT` / `DELETE_PRODUCT` - Product operations
+- `UNAUTHORIZED_ACCESS` - Invalid tokens
+- `FORBIDDEN_ACCESS` - Insufficient permissions
+
+---
+
+### 7. **Middleware Execution Order**
 
 Understanding the order is crucial:
 
@@ -831,11 +1182,17 @@ express.json() - Parse JSON body
   ↓
 logger - Log request details
   ↓
-Routes (/health, /products)
+Routes (/health, /auth, /products, /audit-logs)
+  ↓
+Authentication Middleware (protect)
+  ↓
+Authorization Middleware (restrictTo)
   ↓
 Validation Middleware (if route matched)
   ↓
 Controller (if validation passed)
+  ↓
+Audit Logging (track action) 🆕
   ↓
 404 Handler (if no route matched)
   ↓
@@ -846,9 +1203,10 @@ Response
 
 ---
 
-## 📊 Request Logging
+## 📊 Request & Audit Logging
 
-Every request is logged with:
+### Request Logging
+Every HTTP request is logged with:
 - ✅/❌ Status indicator
 - HTTP method
 - URL path
@@ -857,8 +1215,25 @@ Every request is logged with:
 
 **Example output:**
 ```
-[2026-02-14T13:25:34.079Z] ✅ DELETE /2 | Status: 200 | ResponseTime: 21ms
-[2026-02-14T13:25:47.362Z] ❌ GET /products/abc | Status: 400 | ResponseTime: 17ms
+[2026-02-27T13:25:34.079Z] ✅ POST /auth/login | Status: 200 | ResponseTime: 45ms
+[2026-02-27T13:25:47.362Z] ❌ DELETE /products/1 | Status: 403 | ResponseTime: 8ms
+```
+
+### Audit Logging 🆕
+Every user action is logged with:
+- WHO performed the action (user ID, email)
+- WHAT action was performed (SIGNUP, DELETE, etc.)
+- WHEN it happened (timestamp)
+- WHERE it came from (IP address, user agent)
+- Status (SUCCESS or FAILURE)
+
+**Example output:**
+```
+[AUDIT] SIGNUP by test@example.com (1) - SUCCESS
+[AUDIT] LOGIN by test@example.com (1) - SUCCESS
+[AUDIT] CREATE_PRODUCT by test@example.com (1) - SUCCESS
+[AUDIT] FORBIDDEN_ACCESS by test@example.com (1) - FAILURE
+[AUDIT] DELETE_PRODUCT by admin@example.com (2) - SUCCESS
 ```
 
 ---
@@ -881,16 +1256,30 @@ Sends appropriate response
 
 ---
 
-## 📚 Learned
+## 📚 What You Learned
 
 ### ✅ **Architecture Patterns**
 - Separation of concerns
 - Middleware pattern
 - Error handling middleware
 - Custom error classes
+- Audit logging pattern 🆕
+
+### ✅ **Security Concepts** 🆕
+- JWT authentication
+- Role-based authorization
+- Password hashing with bcrypt
+- Audit trail for accountability
+- Compliance and forensics
+- Attack detection and prevention
 
 ### ✅ **Express.js Concepts**
 - Route organization
+- Middleware chains
+- Error propagation
+- Request/response cycle
+- Protected routes
+- Query parameters
 - Middleware chains
 - Error propagation
 - Request/response cycle
@@ -899,13 +1288,23 @@ Sends appropriate response
 - Input validation
 - Consistent API design
 - Error handling strategies
-- Logging and monitoring
+- Request and audit logging
+- Security best practices
+- Immutable audit trails 🆕
 
 ### ✅ **JavaScript/Node.js**
 - Async/await patterns
 - Promise error handling
 - Module exports
 - Arrow functions
+- Spread operator
+- Array methods (filter, find, slice)
+
+### ✅ **Data Management** 🆕
+- In-memory data stores
+- Immutable data patterns
+- Query and filter patterns
+- Data recovery from audit logs
 
 ---
 
@@ -918,16 +1317,21 @@ Here are some improvements you could make:
 3. **Filtering & Sorting** (by category, price, etc.)
 4. **Search functionality** (by name)
 5. **Connect to real database** (MongoDB, PostgreSQL)
-6. **Password reset functionality** (via email)
-7. **Refresh tokens** (for better security)
-8. **Unit & Integration tests** (Jest, Mocha, Supertest)
-9. **API Documentation** (Swagger/OpenAPI)
-10. **Rate limiting** (prevent abuse with express-rate-limit)
-11. **CORS configuration** (for frontend apps)
-12. **Environment variables** (.env file for secrets)
-13. **Input sanitization** (prevent injection attacks)
-14. **Email verification** (verify user email on signup)
-15. **Account lockout** (after multiple failed login attempts)
+6. **Migrate audit logs to database** - Permanent storage 🆕
+7. **Password reset functionality** (via email)
+8. **Refresh tokens** (for better security)
+9. **Audit log retention policy** - Auto-archive old logs 🆕
+10. **Export audit logs** - CSV/JSON download 🆕
+11. **Real-time alerts** - WebSocket notifications for critical events 🆕
+12. **Unit & Integration tests** (Jest, Mocha, Supertest)
+13. **API Documentation** (Swagger/OpenAPI)
+14. **Rate limiting** (prevent abuse with express-rate-limit)
+15. **CORS configuration** (for frontend apps)
+16. **Environment variables** (.env file for secrets)
+17. **Input sanitization** (prevent injection attacks)
+18. **Email verification** (verify user email on signup)
+19. **Account lockout** (after multiple failed login attempts)
+20. **Anomaly detection** - Alert on suspicious patterns 🆕
 
 ---
 
@@ -948,6 +1352,18 @@ Stop-Process -Name node -Force
 ### Issue: Changes not reflected
 **Solution:** Restart the server after making changes (or use nodemon for auto-restart).
 
+### Issue: Audit logs not showing
+**Solution:** 
+- Check that you're authenticated (have a valid token)
+- Admins see all logs at `/audit-logs`, users see their own at `/audit-logs/me`
+- Check server console for `[AUDIT]` messages
+
+### Issue: Script execution disabled
+**Solution:** Enable PowerShell script execution:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
 ---
 
 ## 📝 License
@@ -958,18 +1374,51 @@ This is a learning project. Feel free to use and modify as needed.
 
 ## 🎯 Summary
 
-This Secure Product API demonstrates:
+This Secure Product API with Audit Logging demonstrates:
 - ✅ Professional Express.js architecture with clean separation of concerns
 - ✅ JWT-based authentication and role-based authorization
 - ✅ Secure password hashing with bcrypt
 - ✅ Protected routes with middleware chains
+- ✅ **Comprehensive audit logging** - Track WHO did WHAT, WHEN, and WHERE 🆕
+- ✅ **Immutable audit trail** - Permanent record for compliance 🆕
+- ✅ **Query and filter logs** - By user, action, or time 🆕
 - ✅ Industry-standard error handling with custom error classes
 - ✅ Clean, maintainable, and well-documented code
 - ✅ RESTful API design with consistent responses
 - ✅ Input validation and security best practices
 - ✅ Production-ready patterns for scalable APIs
 
-**This project is ready for database integration and deployment! 🚀**
+**This project is ready for database integration, deployment, and real-world use! 🚀**
+
+---
+
+## 📁 Additional Documentation
+
+- **AUDIT_LOGGING_SUMMARY.md** - Complete audit logging implementation guide
+- **HOW_TO_TEST.md** - Quick testing guide
+- **QUICK_TEST.md** - Manual test commands  
+- **TEST_AUDIT_LOGGING.md** - Detailed audit logging tests
+- **test-audit.ps1** - Automated test script
+
+---
+
+## 🎓 Skills Gained
+
+By building this API, you've learned:
+- ✅ Express.js middleware patterns
+- ✅ JWT authentication flow
+- ✅ Role-based authorization
+- ✅ Password security with bcrypt
+- ✅ **Audit logging implementation** 🆕
+- ✅ **Compliance and accountability** 🆕
+- ✅ Error handling strategies
+- ✅ RESTful API design
+- ✅ Input validation
+- ✅ Clean architecture
+- ✅ Security best practices
+- ✅ MERN stack foundations
+
+**Happy Learning! 🚀**
 
 ---
 
