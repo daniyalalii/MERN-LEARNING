@@ -4,6 +4,7 @@ const ApiResponse = require('../utils/apiResponse');
 const { users, getNextUserId } = require('../data/userStore');
 const { hashPassword, comparePassword } = require('../utils/password');
 const { generateToken } = require('../utils/jwt');
+const {logAudit, AUDIT_ACTIONS, AUDIT_RESOURCES} = require('../utils/auditLogger');
 
 // signup (create new User)
 exports.signup = catchAsync(async (req, res, next) => {
@@ -19,16 +20,31 @@ exports.signup = catchAsync(async (req, res, next) => {
     const hashedPassword = await (hashPassword(password));
     //create new user
     const newUser = {
-        id: getNextUserId(),
-        name: name.trim(),
-        email: email.toLowerCase(),
+        id: users.length + 1,
+        name,
+        email,
         password: hashedPassword,
-        role: role,
+        role,
         createdAt: new Date().toISOString()
     }
 
     // add user
     users.push(newUser);
+
+    //audit log
+    logAudit({
+        req,
+        userId : newUser.id,
+        userName : newUser.email,
+        action :  AUDIT_ACTIONS.SIGNUP,
+        resource : AUDIT_RESOURCES.USER,
+        resourceId : newUser.id,
+        status : 'SUCCESS',
+        details : {
+            role : newUser.role,
+            name : newUser.name 
+        }
+    });
 
     // JWT Token
     const token = generateToken(newUser.id, newUser.email, newUser.role);
@@ -58,16 +74,37 @@ exports.login = catchAsync(async (req, res, next) => {
 
     // find user by email
     const user = users.find(u => u.email === email.toLowerCase());
-    if (!user) {
-        return next(new AppError('Invalid email or password', 401));
-    }
+    // if (!user) {
+    //     return next(new AppError('Invalid email or password', 401));
+    // }
 
     // check Password
     const isPasswordCorrect = await comparePassword(password, user.password);
-    if (!isPasswordCorrect) {
+    if (!user || !isPasswordCorrect) {
+        logAudit({
+            req,
+            userId : user? user.id : 'unknown',
+            userName : email,
+            action : AUDIT_ACTIONS.LOGIN_FAILED,
+            resource : AUDIT_RESOURCES.AUTH,
+            status : 'FAILURE',
+            details : {
+                reason : 'Invalid credentials'
+            }
+        });
         return next(new AppError('Invalid email or Password!', 401));
     }
 
+    // successfull login log
+    logAudit({
+        req,
+        userId : user.id,
+        userName : user.email,
+        action : AUDIT_ACTIONS.LOGIN,
+        resource : AUDIT_RESOURCES.AUTH,
+        status : 'SUCCESS'
+    });
+    
     // generate token
     const token = generateToken(user.id, user.email, user.role);
 
