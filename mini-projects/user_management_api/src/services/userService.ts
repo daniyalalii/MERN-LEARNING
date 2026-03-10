@@ -3,7 +3,7 @@ import type { ApiResponse } from "../types/api.js"
 import type { CreateUserDto, PublicUser, updateUserDto, User } from "../types/user.js"
 import type { AppError } from "../types/errors.js"
 import type { Result } from "../types/result.js"
-
+import { findUserById } from "../repositories/userRepository.js"
 export function createUser(
     input: CreateUserDto
 ) : ApiResponse<PublicUser>{
@@ -31,10 +31,10 @@ export function createUser(
     }
 }
 
-export function getUserById(
+export async function getUserByIdService(
     id: string
-): Result<PublicUser, AppError>{
-    const user = users.find(u=> u.id === id)
+): Promise<Result<PublicUser, AppError>>{
+    const user = await findUserById(id)
     if(!user){
         return{
             ok: false,
